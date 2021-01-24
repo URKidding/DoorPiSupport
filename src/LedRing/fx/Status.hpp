@@ -32,7 +32,7 @@ public:
       switch (Machine())
       {
       // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-      case States::FadeIn:
+      case States::FadeOut:
         {
           int t = Machine.dwell();
 
@@ -40,9 +40,9 @@ public:
 
           for (auto i = 0; i < Parent.numPixels(); ++i)
           {
-            auto r = mix(TargetLevel, R, fade_pph256);
-            auto g = mix(TargetLevel, G, fade_pph256);
-            auto b = mix(TargetLevel, B, fade_pph256);
+            auto r = mix(TargetLevel, 0, fade_pph256);
+            auto g = mix(TargetLevel, 0, fade_pph256);
+            auto b = mix(TargetLevel, 0, fade_pph256);
 
             Parent.setPixelColor(i, r, g, b);
           }
@@ -50,22 +50,30 @@ public:
           
           if (t >= Fade_ms)
           {
-            Machine = States::Stay;
+            Machine = States::Color;
           }
         }
         break;
-
+        
       // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-      case States::Stay:
-        if (Machine.hasExpired(Stay_ms))
+      case States::Color:
+        if      (Machine.stateEntry())
         {
-          Machine = States::FadeOut;
+          for (auto i = 0; i < Parent.numPixels(); ++i)
+          {
+            Parent.setPixelColor(i, R, G, B);
+          }
+          Parent.show();
+        }
+        else if (Machine.hasExpired(Stay_ms))
+        {
+          Machine = States::FadeIn;
         }
         break;
 
 
-      // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-      case States::FadeOut:
+        // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
+      case States::FadeIn:
         {
           int t = Machine.dwell();
 
@@ -86,6 +94,7 @@ public:
             Machine = States::Finished;
           }
         }
+        break;
 
       // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
       case States::Finished:
@@ -106,9 +115,9 @@ private:
 
   enum class States
   {
-    FadeIn,
-    Stay,
     FadeOut,
+    Color,
+    FadeIn,
     Finished
   };
   common::TimedStatemachine<States> Machine;

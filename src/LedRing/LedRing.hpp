@@ -6,6 +6,7 @@
 #include "Delta/TimeDelta.hpp"
 #include "fx/ILedFx.hpp"
 #include "fx/Activate.hpp"
+#include "fx/Booting.hpp"
 #include "fx/Deactivate.hpp"
 #include "fx/Status.hpp"
 
@@ -58,8 +59,21 @@ public:
     {
       CurrentFx = TFx(new fx::Status(*this, Brightness, 0, 0));
     }
+    else if (fx == "check")
+    {
+      CurrentFx = TFx(new fx::Status(*this, Brightness / 2, Brightness / 2, 0));
+    }
+    else if (fx == "bell")
+    {
+      CurrentFx = TFx(new fx::Status(*this, 0, 0, Brightness));
+    }
+    else if (fx == "booting")
+    {
+      CurrentFx = TFx(new fx::Booting(*this));
+    }
     else
     {
+      CurrentFx.release();
       return false;
     }
 

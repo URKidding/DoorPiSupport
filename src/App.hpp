@@ -1,8 +1,11 @@
 #ifndef APP_INCLUDED_HPP
 #define APP_INCLUDED_HPP
 
+#include <Arduino.h>
 #include <ArduinoJson.hpp>
+#include "Button/Button.hpp"
 #include "LedRing/LedRing.hpp"
+#include "PIR/Pir.hpp"
 #include "Rfid/Reader.hpp"
 #include <sstream>
 #include <iomanip>
@@ -16,10 +19,15 @@ class App
   enum
   {
     Led_DIn     = 33,
-    PIR_Pin     = 39,
-    S1_Pin      = 34,
-    S2_Pin      = 35,
-    S3_Pin      = 32,
+    PIR_IO      = 39,
+
+    NrButtons   = 3,
+    S1_IO       = 34,
+    S2_IO       = 35,
+    S3_IO       = 32,
+
+    Servo1_IO   = 22,
+    Servo2_IO   = 23,
   };
 
   using JsonDoc = ArduinoJson::StaticJsonDocument<512>;
@@ -32,45 +40,54 @@ public:
     Polling_ms = 10,
   };
 
-  App() : Ring(Led_DIn)
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  /// Konstruktor.
+  App() : PIR(PIR_IO), Ring(Led_DIn)
   {
     Ring.setBrightness(100);
-    delay(500);
-
-    pinMode(PIR_Pin, INPUT);
+    Ring = "booting";
   }
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  /// Polling-Funktor.
   void operator()()
   {
     common::delta::TimeDelta<>::tick(Polling_ms);
 
     handleUsart();
 
+    if (Enabled)
     {
-      auto pir = digitalRead(PIR_Pin);
-      if (pir != PirActive)
+      handleButtons();
+
       {
-        Serial.print(pir);
-        PirActive = pir;
-        Ring = pir ? "activate" : "deactivate";
+        auto uid = Reader();
+        if (uid != nullptr)
+        {
+          // Tag wurde gescannt
+          Ring = "check";
+          transmitUid(*uid);
+        }
       }
-    }
-    
-    auto uid = Reader();
-    if (uid)
-    {
-      handleUid(*uid);
-      Ring = "pass";
+
+      if (PIR())
+      {
+        // Änderung am Bewegungsmelder -> übretragen + Ring aktivieren
+        transmitPIR();
+        if (!StayActive)
+        {
+          Ring = *PIR ? "activate" : "deactivate";
+        }
+      }
     }
 
     Ring();
-    delay(Polling_ms);
   }
 
 //==============================================================================================================================================================
 private:
 //==============================================================================================================================================================
+  /// eingehende Nachrichten vom USART behandeln.
   void handleUsart()
   {
     while (Serial.available()) 
@@ -95,6 +112,11 @@ private:
           {
             setFromJson(msg);
           }
+          else if (action == "enable")
+          {
+            Ring       = "";
+            Enabled    = true;
+          }          
           else if (action == "reboot")
           {
             while(true) {};
@@ -107,7 +129,51 @@ private:
   }
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  void handleUid(MFRC522::Uid& uid)
+  /// Überträgt den Zustand des Bewegungsmelders.
+  void transmitPIR()
+  {
+    auto state = *PIR;
+
+    JsonDoc event = createDoc("event");
+    event["PIR"]  = state ? "true" : "false";
+
+    serializeJson(event, Serial);
+    Serial.write('\n');    
+  }
+
+
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  /// Klingeltaster auswerten.
+  void handleButtons()
+  {
+    bool anyPressed = false;
+
+    for (auto& button : Buttons)
+    {
+      if (button())
+      {
+        JsonDoc event      = createDoc("event");
+        event[button.Name] = button.getStateText();
+
+        if (*button == button::State::Pressed)
+        {
+          anyPressed = true;
+        }
+
+        serializeJson(event, Serial);
+        Serial.write('\n');        
+      }
+    }
+
+    if (anyPressed)
+    {
+      Ring = "bell"; 
+    };
+  }
+
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  /// UID des gelesenen Tags übertragen.
+  void transmitUid(MFRC522::Uid& uid)
   {
     auto doc = createDoc("event");
 
@@ -130,7 +196,9 @@ private:
     Serial.write('\n');
   }
 
+
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  /// eingehende JSON-Sollwertkommandos behandeln.
   void setFromJson(JsonDoc const& doc)
   {
     if (doc.containsKey("bright"))
@@ -138,15 +206,38 @@ private:
       uint32_t brightness = doc["bright"];
       Ring                = brightness;
     }
-    if (doc.containsKey("fx"))
+    if (doc.containsKey("led"))
     {
-      std::string fx = doc["fx"];
-      Ring           = fx;
+      std::string led = doc["led"];
+
+      if (led == "activate")
+      {
+        if (!*PIR)
+        {
+          Ring     = led;
+        }
+        StayActive = true;
+      }
+      else if (led == "deactivate")
+      {
+        if (!*PIR)
+        {
+          Ring     = led;
+        }
+        StayActive = false;
+      }
+      else
+      {
+        Ring       = led;
+      }
+
     }
   }
 
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  /// erstellt ein neues JSON-Dokument.
+  /// @param action  Inhalt des action-Keys
   JsonDoc createDoc(char const* action)
   {
     JsonDoc doc;
@@ -154,12 +245,23 @@ private:
 
     return doc;
   }
+
+
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  std::array<button::Button, NrButtons> Buttons =
+  {{
+    button::Button(S1_IO, "S1"),
+    button::Button(S2_IO, "S2"),
+    button::Button(S3_IO, "S3")
+  }};
+
+  pir::Pir     PIR;
   led::LedRing Ring;
   rfid::Reader Reader;
   std::string  InputBuffer;
 
-  bool PirActive = false;
-
+  bool         Enabled    = false;
+  bool         StayActive = false;
 };
 
 

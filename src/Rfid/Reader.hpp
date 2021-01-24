@@ -10,7 +10,9 @@ namespace dps { namespace rfid {
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
 
-
+#define CLK_PIN        14
+#define MISO_PIN       12
+#define MOSI_PIN       13
 #define SS_PIN         25           // Configurable, see typical pin layout above
 #define RST_PIN        26           // Configurable, see typical pin layout above
 #define IRQ_PIN        27           // Configurable, depends on hardware
@@ -23,11 +25,13 @@ public:
 //==============================================================================================================================================================
   Reader() : Mfrc522(SS_PIN, RST_PIN)
   {
-    SPI.begin(14, 12, 13, SS_PIN);
+    SPI.begin(CLK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
     Mfrc522.PCD_Init(); // Init MFRC522 card
 
     /* read and printout the MFRC522 version (valid values 0x91 & 0x92)*/
-    Mfrc522.PCD_ReadRegister(Mfrc522.VersionReg);
+    auto version = Mfrc522.PCD_ReadRegister(Mfrc522.VersionReg);
+    Serial.print(F("Verison "));
+    Serial.println(version);
 
     /* setup the IRQ pin*/
     pinMode(IRQ_PIN, INPUT_PULLUP);
@@ -44,6 +48,8 @@ public:
 
     while (TagDetected) {}
     TagDetected = false;
+
+    delay(1000);
 
     Serial.println(F("End setup"));
   }
