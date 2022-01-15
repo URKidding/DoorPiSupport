@@ -22,7 +22,7 @@ class Booting : public ILedFX
 //==============================================================================================================================================================
 public:
 //==============================================================================================================================================================
-  Booting(Adafruit_NeoPixel& parent) : Parent(parent), Timer1(T1), Timer2(T2)
+  Booting(Adafruit_NeoPixel& parent, bool startup) : Parent(parent), Startup(startup), Timer1(T1), Timer2(T2)
   {
   }
 
@@ -54,7 +54,14 @@ public:
         c = std::max(0, c - 10);
       }
 
-      Parent.setPixelColor(i, 0, c, c);
+      if (Startup)
+      {
+        Parent.setPixelColor(i, 0, c, c);
+      }
+      else
+      {
+        Parent.setPixelColor(i, c, c / 2, 0);
+      }
       Parent.show();
     }
 
@@ -72,7 +79,9 @@ private:
   std::array<bool, 12>           States = {{ false }};
   std::array<uint8_t, 12>        Levels = {{ 0 }};
 
+
   Adafruit_NeoPixel&             Parent;
+  bool                           Startup;
   common::delta::PeriodicTimer<> Timer1;
   common::delta::PeriodicTimer<> Timer2;
 };

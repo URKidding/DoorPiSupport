@@ -1,14 +1,27 @@
 #ifndef APP_INCLUDED_HPP
 #define APP_INCLUDED_HPP
 
+#include <AccelStepper.h>
 #include <Arduino.h>
 #include <ArduinoJson.hpp>
 #include "Button/Button.hpp"
+#include "Delta/PeriodicTimer.hpp"
 #include "LedRing/LedRing.hpp"
 #include "PIR/Pir.hpp"
 #include "Rfid/Reader.hpp"
 #include <sstream>
 #include <iomanip>
+
+
+
+
+
+// void loop()
+//     stepper2.run();
+//     stepper3.run();
+// }
+
+
 
 namespace dps {
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
@@ -42,17 +55,26 @@ public:
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   /// Konstruktor.
-  App() : PIR(PIR_IO), Ring(Led_DIn)
+  App() : PIR(PIR_IO),
+          Ring(Led_DIn),
+          RoutineTimer(15000)
   {
     Ring.setBrightness(100);
-    Ring = "booting";
+    Ring = "startup";
+
+
   }
+
+
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   /// Polling-Funktor.
   void operator()()
   {
     common::delta::TimeDelta<>::tick(Polling_ms);
+
+
+
 
     handleUsart();
 
@@ -79,6 +101,20 @@ public:
           Ring = *PIR ? "activate" : "deactivate";
         }
       }
+    }
+
+    if (RoutineTimer())
+    {
+      JsonDoc doc = createDoc("status");
+      doc["PIR"]  = *PIR ? "true" : "false";
+
+      for (auto& button : Buttons)
+      {
+        doc[button.Name] = button.getStateText();
+      }
+
+      serializeJson(doc, Serial);
+      Serial.write('\n');    
     }
 
     Ring();
@@ -117,6 +153,11 @@ private:
             Ring       = "";
             Enabled    = true;
           }          
+          else if (action == "disable")
+          {
+            Ring       = "shutdown";
+            Enabled    = false;
+          }          
           else if (action == "reboot")
           {
             while(true) {};
@@ -138,7 +179,9 @@ private:
     event["PIR"]  = state ? "true" : "false";
 
     serializeJson(event, Serial);
-    Serial.write('\n');    
+    Serial.write('\n');
+
+    RoutineTimer.reset();   
   }
 
 
@@ -162,6 +205,7 @@ private:
 
         serializeJson(event, Serial);
         Serial.write('\n');        
+        RoutineTimer.reset();   
       }
     }
 
@@ -194,7 +238,9 @@ private:
 
     serializeJson(doc, Serial);
     Serial.write('\n');
+    RoutineTimer.reset();
   }
+
 
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -260,8 +306,13 @@ private:
   rfid::Reader Reader;
   std::string  InputBuffer;
 
+  common::delta::PeriodicTimer<> RoutineTimer;
+
   bool         Enabled    = false;
   bool         StayActive = false;
+
+
+
 };
 
 
@@ -271,3 +322,5 @@ private:
 } // namespace dps
 
 #endif // APP_INCLUDED_HPP
+
+

@@ -67,9 +67,13 @@ public:
     {
       CurrentFx = TFx(new fx::Status(*this, 0, 0, Brightness));
     }
-    else if (fx == "booting")
+    else if (fx == "startup")
     {
-      CurrentFx = TFx(new fx::Booting(*this));
+      CurrentFx = TFx(new fx::Booting(*this, true));
+    }
+    else if (fx == "shutdown")
+    {
+      CurrentFx = TFx(new fx::Booting(*this, false));
     }
     else
     {
