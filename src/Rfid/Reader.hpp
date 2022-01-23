@@ -70,6 +70,8 @@ public:
 
     if (TagDetected)
     {
+
+      Serial.println("!!!!!!!!!!!!");
       auto succ = Mfrc522.PICC_ReadCardSerial(); //read the tag data
 
       clearInt();
