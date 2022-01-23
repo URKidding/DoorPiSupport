@@ -4,7 +4,7 @@
 #include <algorithm>
 #include "ILedFx.hpp"
 #include "Statemachine/TimedStatemachine.hpp"
-#include <Adafruit_NeoPixel.h>
+#include "Pico_WS2812/WS2812.hpp"
 #include "Delta/PeriodicTimer.hpp"
 namespace dps { namespace led { namespace fx {
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
@@ -15,14 +15,14 @@ class Booting : public ILedFX
   enum
   {
     TargetLevel   =  100,
-    T1            =  67,
-    T2            =  27
+    T1            =  77,
+    T2            =  117
   };
 
 //==============================================================================================================================================================
 public:
 //==============================================================================================================================================================
-  Booting(Adafruit_NeoPixel& parent, bool startup) : Parent(parent), Startup(startup), Timer1(T1), Timer2(T2)
+  Booting(WS2812& parent, bool startup) : Parent(parent), Startup(startup), Timer1(T1), Timer2(T2)
   {
   }
 
@@ -80,7 +80,7 @@ private:
   std::array<uint8_t, 12>        Levels = {{ 0 }};
 
 
-  Adafruit_NeoPixel&             Parent;
+  WS2812&                        Parent;
   bool                           Startup;
   common::delta::PeriodicTimer<> Timer1;
   common::delta::PeriodicTimer<> Timer2;

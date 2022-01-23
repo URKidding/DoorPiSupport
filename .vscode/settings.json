@@ -41,7 +41,18 @@
     "streambuf": "cpp",
     "cinttypes": "cpp",
     "utility": "cpp",
-    "typeinfo": "cpp"
+    "typeinfo": "cpp",
+    "atomic": "cpp",
+    "bit": "cpp",
+    "compare": "cpp",
+    "concepts": "cpp",
+    "map": "cpp",
+    "iterator": "cpp",
+    "memory_resource": "cpp",
+    "optional": "cpp",
+    "string": "cpp",
+    "ranges": "cpp"
   },
-  "C_Cpp.errorSquiggles": "Disabled"
+  "C_Cpp.errorSquiggles": "Disabled",
+  "cmake.configureOnOpen": false
 }

@@ -9,17 +9,6 @@
 #include "LedRing/LedRing.hpp"
 #include "PIR/Pir.hpp"
 #include "Rfid/Reader.hpp"
-#include <sstream>
-#include <iomanip>
-
-
-
-
-
-// void loop()
-//     stepper2.run();
-//     stepper3.run();
-// }
 
 
 
@@ -31,16 +20,22 @@ class App
 {
   enum
   {
-    Led_DIn     = 33,
-    PIR_IO      = 39,
+    // Led_DIn     = 33,
+    // PIR_IO      = 39,
 
-    NrButtons   = 3,
-    S1_IO       = 34,
-    S2_IO       = 35,
-    S3_IO       = 32,
+    // NrButtons   = 3,
+    // S1_IO       = 34,
+    // S2_IO       = 35,
+    // S3_IO       = 32,
 
-    Servo1_IO   = 22,
-    Servo2_IO   = 23,
+    Led_DIn        = 27, // 33,
+    PIR_IO         = 9,  // 39,
+
+    NrButtons      = 3,
+    S1_IO          = 13,
+    S2_IO          = 12,
+    S3_IO          = 11,
+
   };
 
   using JsonDoc = ArduinoJson::StaticJsonDocument<512>;
@@ -55,16 +50,26 @@ public:
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   /// Konstruktor.
-  App() : PIR(PIR_IO),
-          Ring(Led_DIn),
-          RoutineTimer(15000)
+  App() : PIR         (PIR_IO ),
+          Ring        (Led_DIn),
+          RoutineTimer(15000  ),
+          Steppers    {{AccelStepper(AccelStepper::FULL4WIRE, 19, 18, 17, 16),
+                        AccelStepper(AccelStepper::FULL4WIRE, 26, 22, 21, 29)}}
   {
-    Ring.setBrightness(100);
+    sleep_ms(100);
+    Ring = 100;
     Ring = "startup";
 
-
+    for (auto& s : Steppers)
+    {
+      s.setMaxSpeed    ( 200.0);
+      s.setAcceleration( 100.0);
+      s.setSpeed       ( 200.0);
+      s.moveTo(10000);
+    }
   }
 
+  bool onoff = false;
 
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -73,20 +78,26 @@ public:
   {
     common::delta::TimeDelta<>::tick(Polling_ms);
 
-
-
-
     handleUsart();
 
+  
+Enabled = true;
     if (Enabled)
     {
       handleButtons();
 
       {
         auto uid = Reader();
+
         if (uid != nullptr)
         {
+          digitalWrite(25, onoff);
+          onoff = !onoff;
+
+
+
           // Tag wurde gescannt
+
           Ring = "check";
           transmitUid(*uid);
         }
@@ -120,6 +131,14 @@ public:
     Ring();
   }
 
+  void pollSteppers()
+  {
+    for (auto& s : Steppers)
+    {
+      s.run();
+    }
+  }
+
 //==============================================================================================================================================================
 private:
 //==============================================================================================================================================================
@@ -142,7 +161,7 @@ private:
         JsonDoc msg;
         if (deserializeJson(msg, InputBuffer) == ArduinoJson::DeserializationError::Ok) 
         {          
-          std::string action = msg["action"];
+          String action = msg["action"];
 
           if      (action == "set")
           {
@@ -164,7 +183,7 @@ private:
           }        
         }
 
-        InputBuffer.clear();
+        InputBuffer = "";
       }
     }
   }
@@ -219,21 +238,27 @@ private:
   /// UID des gelesenen Tags übertragen.
   void transmitUid(MFRC522::Uid& uid)
   {
+    char buffer[100];
     auto doc = createDoc("event");
 
     auto rfid = doc.createNestedObject("tag");
     {
-      std::stringstream ss;
-      ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(uid.sak);
-      rfid["sak"] = ss.str();
+      char* end = buffer;
+      end += sprintf(end, "%02x", uid.sak);
+      *end = '\0';
+
+      String s    = buffer;
+      rfid["sak"] = s;
     }
     {
-      std::stringstream ss;
+      char* end = buffer;
       for (byte i = 0; i <  uid.size; i++)
       {
-        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(uid.uidByte[i]);
+        end += sprintf(end, "%02x", uid.uidByte[i]);
       }
-      rfid["uid"] = ss.str();
+      *end = '\0';
+      String s    = buffer;
+      rfid["uid"] = s;
     }
 
     serializeJson(doc, Serial);
@@ -254,7 +279,7 @@ private:
     }
     if (doc.containsKey("led"))
     {
-      std::string led = doc["led"];
+      String led = doc["led"];
 
       if (led == "activate")
       {
@@ -301,10 +326,13 @@ private:
     button::Button(S3_IO, "S3")
   }};
 
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  std::array<AccelStepper, 2> Steppers;
+  
+
   pir::Pir     PIR;
-  led::LedRing Ring;
   rfid::Reader Reader;
-  std::string  InputBuffer;
+  String       InputBuffer;
 
   common::delta::PeriodicTimer<> RoutineTimer;
 
@@ -312,6 +340,7 @@ private:
   bool         StayActive = false;
 
 
+  led::LedRing Ring;
 
 };
 

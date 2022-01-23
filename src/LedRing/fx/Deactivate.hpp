@@ -4,7 +4,7 @@
 #include <algorithm>
 #include "ILedFx.hpp"
 #include "Statemachine/TimedStatemachine.hpp"
-#include <Adafruit_NeoPixel.h>
+#include "Pico_WS2812/WS2812.hpp"
 
 namespace dps { namespace led { namespace fx {
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
@@ -23,7 +23,7 @@ class Deactivate : public ILedFX
 //==============================================================================================================================================================
 public:
 //==============================================================================================================================================================
-  Deactivate(Adafruit_NeoPixel& parent, uint32_t brightness) : Parent(parent), Brightness(brightness)
+  Deactivate(WS2812& parent, uint32_t brightness) : Parent(parent), Brightness(brightness)
   {
   }
 
@@ -75,7 +75,7 @@ private:
   };
   common::TimedStatemachine<States> Machine;
 
-  Adafruit_NeoPixel& Parent;
+  WS2812&            Parent;
   int32_t            Brightness;
 };
 

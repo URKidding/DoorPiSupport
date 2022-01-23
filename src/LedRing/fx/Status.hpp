@@ -4,7 +4,7 @@
 #include <algorithm>
 #include "ILedFx.hpp"
 #include "Statemachine/TimedStatemachine.hpp"
-#include <Adafruit_NeoPixel.h>
+#include "Pico_WS2812/WS2812.hpp"
 
 namespace dps { namespace led { namespace fx {
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
@@ -21,7 +21,7 @@ class Status : public ILedFX
 //==============================================================================================================================================================
 public:
 //==============================================================================================================================================================
-  Status(Adafruit_NeoPixel& parent, uint32_t r, uint32_t g, uint32_t b, uint32_t stay_ms = 1000) : Parent(parent), R(r), G(g), B(b), Stay_ms(stay_ms)
+  Status(WS2812& parent, uint32_t r, uint32_t g, uint32_t b, uint32_t stay_ms = 1000) : Parent(parent), R(r), G(g), B(b), Stay_ms(stay_ms)
   {
   }
 
@@ -122,7 +122,7 @@ private:
   };
   common::TimedStatemachine<States> Machine;
 
-  Adafruit_NeoPixel& Parent;
+  WS2812& Parent;
 
   uint32_t R;
   uint32_t G;

@@ -36,7 +36,7 @@ public:
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   explicit Button(uint8_t io, char const* name, uint32_t polling_ms = 10) : Name(name), IO(io), Polling_ms(polling_ms)
   {
-    pinMode(IO,  INPUT);
+    pinMode(IO,  INPUT_PULLUP);
   }
 
 

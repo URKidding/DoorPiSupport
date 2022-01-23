@@ -4,7 +4,7 @@
 #include <algorithm>
 #include "ILedFx.hpp"
 #include "Statemachine/TimedStatemachine.hpp"
-#include <Adafruit_NeoPixel.h>
+#include "Pico_WS2812/WS2812.hpp"
 
 namespace dps { namespace led { namespace fx {
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
@@ -19,11 +19,11 @@ class Activate : public ILedFX
     WhiteDelay_ms = 250,
     WhiteFade_ms  = 750,
   };
-
+  
 //==============================================================================================================================================================
 public:
 //==============================================================================================================================================================
-  Activate(Adafruit_NeoPixel& parent, uint32_t brightness) : Parent(parent), Brightness(brightness)
+  Activate(WS2812& parent, uint32_t brightness) : Parent(parent), Brightness(brightness)
   {
   }
 
@@ -76,7 +76,7 @@ private:
   };
   common::TimedStatemachine<States> Machine;
 
-  Adafruit_NeoPixel& Parent;
+  WS2812&            Parent;
   int32_t            Brightness;
 };
 

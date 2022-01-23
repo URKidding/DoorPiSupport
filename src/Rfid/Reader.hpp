@@ -1,7 +1,7 @@
 #ifndef RFID_READER_HPP_INCLUDED
 #define RFID_READER_HPP_INCLUDED
 
-
+#include <Arduino.h>
 #include <stdint.h>
 #include <SPI.h>
 #include <MFRC522.h>
@@ -10,12 +10,14 @@ namespace dps { namespace rfid {
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
 
 
-#define CLK_PIN        14
-#define MISO_PIN       12
-#define MOSI_PIN       13
-#define SS_PIN         25           // Configurable, see typical pin layout above
-#define RST_PIN        26           // Configurable, see typical pin layout above
-#define IRQ_PIN        27           // Configurable, depends on hardware
+#define CLK_PIN       2 // 14
+#define MOSI_PIN      3 // 13
+#define MISO_PIN      4 // 12
+#define RST_PIN       0 // 26           // Configurable, see typical pin layout above
+#define SS_PIN        1 // 25           // Configurable, see typical pin layout above
+#define IRQ_PIN       5 // 27           // Configurable, depends on hardware
+
+
 
 //==============================================================================================================================================================
 class Reader
@@ -25,12 +27,16 @@ public:
 //==============================================================================================================================================================
   Reader() : Mfrc522(SS_PIN, RST_PIN)
   {
-    SPI.begin(CLK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
+    SPI.setSCK(CLK_PIN);
+    SPI.setRX (MISO_PIN);
+    SPI.setTX (MOSI_PIN);
+    SPI.begin();
+    //SPI.begin(CLK_PIN, MISO_PIN, MOSI_PIN, SS_PIN);
     Mfrc522.PCD_Init(); // Init MFRC522 card
 
     /* read and printout the MFRC522 version (valid values 0x91 & 0x92)*/
     auto version = Mfrc522.PCD_ReadRegister(Mfrc522.VersionReg);
-    Serial.print(F("Verison "));
+    Serial.print(F("Version "));
     Serial.println(version);
 
     /* setup the IRQ pin*/
@@ -59,23 +65,32 @@ public:
   {
     MFRC522::Uid* uid = nullptr;
 
+    TagDetected = !digitalRead(IRQ_PIN);
+
+
     if (TagDetected)
     {
-      Mfrc522.PICC_ReadCardSerial(); //read the tag data
+      auto succ = Mfrc522.PICC_ReadCardSerial(); //read the tag data
+
       clearInt();
       Mfrc522.PICC_HaltA();
+      if (succ)
+      {
 
-      CurrentUid = Mfrc522.uid;
-      uid = &CurrentUid;
+
+        CurrentUid = Mfrc522.uid;
+        uid = &CurrentUid;
+      }
 
       TagDetected = false;
     }
 
-
     activateRec();
+
     return uid;
   }
-  
+
+
 //==============================================================================================================================================================
 private:
 //==============================================================================================================================================================
