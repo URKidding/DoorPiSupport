@@ -1,12 +1,13 @@
-#ifndef BUTTON_HPP_INCLUDED
-#define BUTTON_HPP_INCLUDED
+#ifndef STEPPERS_HPP_INCLUDED
+#define STEPPERS_HPP_INCLUDED
 
 #include <algorithm>
 #include <array>
+#include <AccelStepper.h>
 #include <Arduino.h>
 
-namespace dps {
-namespace button          {
+namespace dps      {
+namespace steppers {
 // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~    
 
 //==============================================================================================================================================================
@@ -20,102 +21,87 @@ enum State
 //==============================================================================================================================================================
 
 //==============================================================================================================================================================
-class Button
+class Steppers
 {
 //==============================================================================================================================================================
 public:
 //==============================================================================================================================================================
   enum : int
   {
-    DebounceLimit_ms  =   50,
-    LongLimit_ms      = 1000
+    InitDistance    = 500,
+    InitPosition    = 200,
+    MaxSpeed        = 2000,
+    Acceleration    = 1000,
+    EndstopPosition = 200
   };
 
 
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  explicit Button(uint8_t io, char const* name, uint32_t polling_ms = 10) : Name(name), IO(io), Polling_ms(polling_ms)
+  explicit Steppers() :
+    Units {{{AccelStepper(AccelStepper::FULL4WIRE, 19, 18, 17, 16), 8},
+            {AccelStepper(AccelStepper::FULL4WIRE, 26, 22, 21, 29), 7}}}
   {
-    pinMode(IO,  INPUT);
+    for (auto& u : Units)
+    {
+      pinMode(u.EndStopIO, INPUT_PULLUP);
+
+      u.Stepper.setMaxSpeed    (MaxSpeed    );
+      u.Stepper.setAcceleration(Acceleration);
+      u.Stepper.setSpeed       (MaxSpeed    );
+      u.Stepper.moveTo         (InitDistance);
+    }
   }
 
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  bool operator()()
+  void operator()()
   {
-    bool event       = false;
-    auto pressed     = !digitalRead(IO);
-    auto debounce_ms = Debounce_ms + (pressed ? Polling_ms : -Polling_ms);
-    Debounce_ms      = std::max(std::min((int) debounce_ms, (int) DebounceLimit_ms), 0);
-
-    switch (CurrentState)
+    for (auto& u : Units)
     {
-      // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-      case State::Released:
-        if (Debounce_ms == DebounceLimit_ms)
+      if (!u.Initialised)
+      {
+        if (   !digitalRead        (u.EndStopIO)
+            || !u.Stepper.isRunning()           )
         {
-          Long_ms      = 0;
-          CurrentState = State::Pressed;
-          event        = true;
+          // Endstopp durch Schalter oder Block erreicht
+          u.Stepper.setCurrentPosition(EndstopPosition);
+          u.Initialised = true;
         }
-        break;
+      }
+      u.Stepper.run();
+    }
+  }
 
-      // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-      case State::Pressed:
-        Long_ms += Polling_ms;
-        if (Debounce_ms == 0) 
-        {
-          Long_ms      = 0;
-          CurrentState = State::Released;
-          event        = true;
-        }
-        else if (Long_ms >= LongLimit_ms)
-        {
-          CurrentState = State::LongPress;
-          event        = true;
-        }
-        break;
 
-      // ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~
-      case State::LongPress:
-        if (Debounce_ms == 0) 
-        {
-          Long_ms      = 0;
-          CurrentState = State::Released;
-          event        = true;
-        }      
-        break;
+  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  inline void moveTo(int x, int y)
+  {
+    if (Units[0].Initialised)
+    {
+      x = std::min(std::max(x, (int) -EndstopPosition), (int) EndstopPosition);
+      Units[0].Stepper.moveTo(x);
     }
 
-    return event;
+    if (Units[1].Initialised)
+    {
+      y = std::min(std::max(y, (int) -EndstopPosition), (int) EndstopPosition);
+      Units[0].Stepper.moveTo(y);
+    }
   }
 
-  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  State getState() const
-  {
-    return CurrentState;
-  }
-
-  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  char const* getStateText() const
-  {
-    return StateNames[CurrentState];
-  }
-
-  //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  char const*    Name;
 
 //==============================================================================================================================================================
 private:
 //==============================================================================================================================================================
-  uint8_t const                                    IO;
-  uint32_t const                                   Polling_ms;
-
-  State                                            CurrentState = State::Released;
-  static std::array<char const*, State::_NrStates> StateNames;
-
-  int                                              Long_ms     = 0;
-  int                                              Debounce_ms = 0;
+  struct TUnit
+  {
+    AccelStepper Stepper;
+    int          EndStopIO;
+    bool         Initialised = false;
+  };
+  
+  std::array<TUnit, 2> Units;
 };
 //==============================================================================================================================================================
 
@@ -124,4 +110,4 @@ private:
 }} // namespace staircaselights::dps
 
 
-#endif // BUTTON_HPP_INCLUDED
+#endif // STEPPERS_HPP_INCLUDED

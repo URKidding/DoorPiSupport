@@ -9,20 +9,10 @@ using namespace dps;
 App::App() : PIR         (PIR_IO ),
         Ring        (Led_DIn),
         RoutineTimer(15000  ),
-        AliveTimer  (500    ),
-        Steppers    {{AccelStepper(AccelStepper::FULL4WIRE, 19, 18, 17, 16),
-                      AccelStepper(AccelStepper::FULL4WIRE, 26, 22, 21, 29)}}
+        AliveTimer  (500    )
 {
   Ring = 100;
   Ring = "startup";
-
-  for (auto& s : Steppers)
-  {
-    s.setMaxSpeed    ( 200.0);
-    s.setAcceleration( 100.0);
-    s.setSpeed       ( 200.0);
-    s.moveTo(10000);
-  }
 
   pinMode(LED_BUILTIN, OUTPUT);
 

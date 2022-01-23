@@ -1,7 +1,6 @@
 #ifndef APP_INCLUDED_HPP
 #define APP_INCLUDED_HPP
 
-#include <AccelStepper.h>
 #include <Arduino.h>
 #include <ArduinoJson.hpp>
 #include "Button/Button.hpp"
@@ -10,6 +9,7 @@
 #include "LedRing/LedRing.hpp"
 #include "PIR/Pir.hpp"
 #include "Rfid/Reader.hpp"
+#include "Steppers/Steppers.hpp"
 
 
 
@@ -21,14 +21,6 @@ class App
 {
   enum
   {
-    // Led_DIn     = 33,
-    // PIR_IO      = 39,
-
-    // NrButtons   = 3,
-    // S1_IO       = 34,
-    // S2_IO       = 35,
-    // S3_IO       = 32,
-
     Led_DIn        = 27, // 33,
     PIR_IO         = 9,  // 39,
 
@@ -52,7 +44,7 @@ public:
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   /// Konstruktor.
   App();
-  
+
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   /// Polling-Funktor.
@@ -64,10 +56,7 @@ public:
   /// Muss so oft/schnell wie möglich aufgerufen werden.
   inline void pollSteppers()
   {
-    for (auto& s : Steppers)
-    {
-      s.run();
-    }
+    Steppers();
   }
 
 
@@ -121,7 +110,6 @@ private:
 
 
   //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  std::array<AccelStepper, 2>    Steppers;
   
   pir::Pir                       PIR;
   rfid::Reader                   Reader;
@@ -134,6 +122,7 @@ private:
   bool                           StayActive = false;
 
   led::LedRing                   Ring;
+  steppers::Steppers             Steppers;
 };
 
 
